@@ -105,6 +105,11 @@ private:
 		crl::time delayAfterFailure = 10 * crl::time(1000);
 		base::binary_guard guard;
 	};
+	struct KeyPlaceChange {
+		QString wasPath;
+		QString nowPath;
+		PlaceId nowPlace;
+	};
 	using Map = std::unordered_map<Key, Entry>;
 
 	template <typename Callback, typename ...Args>
@@ -190,14 +195,23 @@ private:
 	QString placePath(PlaceId place) const;
 	bool isFreePlace(PlaceId place) const;
 
-	template <typename StoreRecord>
-	std::optional<QString> writeKeyPlaceGeneric(
-		StoreRecord &&record,
+	KeyPlaceChange chooseKeyPlace(
 		const Key &key,
 		const TaggedValue &value,
 		uint32 checksum);
-	std::optional<QString> writeKeyPlace(
+	Error writeNewEntry(
+		const QString &path,
+		QByteArray &&content);
+	template <typename StoreRecord>
+	Error writeKeyPlaceGeneric(
+		StoreRecord &&record,
 		const Key &key,
+		const PlaceId &place,
+		const TaggedValue &value,
+		uint32 checksum);
+	Error writeKeyPlace(
+		const Key &key,
+		const PlaceId &place,
 		const TaggedValue &value,
 		uint32 checksum);
 	template <typename StoreRecord>

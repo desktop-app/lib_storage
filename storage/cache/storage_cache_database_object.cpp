@@ -770,52 +770,89 @@ void DatabaseObject::put(
 	_stale.erase(ranges::remove(_stale, key), end(_stale));
 
 	const auto checksum = CountChecksum(bytes::make_span(value.bytes));
-	const auto maybepath = writeKeyPlace(key, value, checksum);
-	if (!maybepath) {
-		invokeCallback(done, ioError(binlogPath()));
-		return;
-	} else if (maybepath->isEmpty()) {
+	const auto change = chooseKeyPlace(key, value, checksum);
+	if (change.nowPath.isEmpty()) {
 		// Nothing changed.
 		invokeCallback(done, Error::NoError());
 		recordEntryAccess(key);
 		return;
 	}
-	const auto path = *maybepath;
-	File data;
-	const auto result = data.open(path, File::Mode::Write, _key);
-	switch (result) {
+	const auto check = [&](Error error) {
+		if (error.type != Error::Type::None) {
+			QFile(change.nowPath).remove();
+			invokeCallback(done, error);
+			return false;
+		}
+		return true;
+	};
+	if (!check(writeNewEntry(change.nowPath, std::move(value.bytes)))
+		|| !check(writeKeyPlace(key, change.nowPlace, value, checksum))) {
+		return;
+	}
+	if (!change.wasPath.isEmpty()) {
+		QFile(change.wasPath).remove();
+	}
+	invokeCallback(done, Error::NoError());
+	optimize();
+}
+
+DatabaseObject::KeyPlaceChange DatabaseObject::chooseKeyPlace(
+		const Key &key,
+		const TaggedValue &value,
+		uint32 checksum) {
+	Expects(value.bytes.size() <= _settings.maxDataSize);
+
+	auto generatePlace = [&] {
+		auto result = PlaceId();
+		do {
+			bytes::set_random(bytes::object_as_span(&result));
+		} while (!isFreePlace(result));
+		return result;
+	};
+
+	if (const auto i = _map.find(key); i != end(_map)) {
+		const auto size = size_type(value.bytes.size());
+		const auto &already = i->second;
+		const auto alreadyPath = placePath(already.place);
+		if (already.tag == value.tag
+			&& already.size == size
+			&& already.checksum == checksum
+			&& readValueData(already.place, size) == value.bytes) {
+			return KeyPlaceChange{ alreadyPath, QString() };
+		}
+		const auto nowPlace = generatePlace();
+		return KeyPlaceChange{ alreadyPath, placePath(nowPlace), nowPlace };
+	}
+	const auto nowPlace = generatePlace();
+	return KeyPlaceChange{ QString(), placePath(nowPlace), nowPlace };
+}
+
+Error DatabaseObject::writeNewEntry(
+		const QString &path,
+		QByteArray &&content) {
+	auto file = File();
+	switch (file.open(path, File::Mode::Write, _key)) {
 	case File::Result::Failed:
-		remove(key, nullptr);
-		invokeCallback(done, ioError(path));
-		break;
+		return ioError(path);
 
 	case File::Result::LockFailed:
-		remove(key, nullptr);
-		invokeCallback(done, Error{ Error::Type::LockFailed, path });
-		break;
+		return Error{ Error::Type::LockFailed, path };
 
-	case File::Result::Success: {
-		const auto success = data.writeWithPadding(
-			bytes::make_detached_span(value.bytes));
-		if (!success) {
-			data.close();
-			remove(key, nullptr);
-			invokeCallback(done, ioError(path));
-		} else {
-			data.flush();
-			invokeCallback(done, Error::NoError());
-			optimize();
-		}
-	} break;
+	case File::Result::Success:
+		return (file.writeWithPadding(bytes::make_detached_span(content))
+			&& file.flush())
+			? Error::NoError()
+			: ioError(path);
 
 	default: Unexpected("Result in DatabaseObject::put.");
 	}
 }
 
 template <typename StoreRecord>
-std::optional<QString> DatabaseObject::writeKeyPlaceGeneric(
+Error DatabaseObject::writeKeyPlaceGeneric(
 		StoreRecord &&record,
 		const Key &key,
+		const PlaceId &place,
 		const TaggedValue &value,
 		uint32 checksum) {
 	Expects(value.bytes.size() <= _settings.maxDataSize);
@@ -825,42 +862,30 @@ std::optional<QString> DatabaseObject::writeKeyPlaceGeneric(
 	record.key = key;
 	record.setSize(size);
 	record.checksum = checksum;
-	if (const auto i = _map.find(key); i != end(_map)) {
-		const auto &already = i->second;
-		if (already.tag == record.tag
-			&& already.size == size
-			&& already.checksum == checksum
-			&& readValueData(already.place, size) == value.bytes) {
-			return QString();
-		}
-		record.place = already.place;
-	} else {
-		do {
-			bytes::set_random(bytes::object_as_span(&record.place));
-		} while (!isFreePlace(record.place));
-	}
+	record.place = place;
 	const auto result = placePath(record.place);
 	auto writeable = record;
 	const auto success = _binlog.write(bytes::object_as_span(&writeable));
 	if (!success) {
 		_binlog.close();
-		return QString();
+		return ioError(binlogPath());
 	}
 	_binlog.flush();
 
 	const auto applied = processRecordStore(
 		&record,
-		std::is_class<StoreRecord>{});
+		std::is_class<std::decay_t<StoreRecord>>{});
 	Assert(applied);
-	return result;
+	return Error::NoError();
 }
 
-std::optional<QString> DatabaseObject::writeKeyPlace(
+Error DatabaseObject::writeKeyPlace(
 		const Key &key,
+		const PlaceId &place,
 		const TaggedValue &data,
 		uint32 checksum) {
 	if (!_settings.trackEstimatedTime) {
-		return writeKeyPlaceGeneric(Store(), key, data, checksum);
+		return writeKeyPlaceGeneric(Store(), key, place, data, checksum);
 	}
 	auto record = StoreWithTime();
 	record.time = countTimePoint();
@@ -873,7 +898,7 @@ std::optional<QString> DatabaseObject::writeKeyPlace(
 		// So if change in it is not large we stick to the old value.
 		record.time = _time;
 	}
-	return writeKeyPlaceGeneric(std::move(record), key, data, checksum);
+	return writeKeyPlaceGeneric(record, key, place, data, checksum);
 }
 
 template <typename StoreRecord>
