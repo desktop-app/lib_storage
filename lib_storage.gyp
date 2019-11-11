@@ -55,9 +55,6 @@
       '<(src_loc)/storage/storage_encrypted_file.h',
       '<(src_loc)/storage/storage_encryption.cpp',
       '<(src_loc)/storage/storage_encryption.h',
-      '<(src_loc)/storage/storage_file_lock.h',
-      '<(src_loc)/storage/storage_file_lock_posix.cpp',
-      '<(src_loc)/storage/storage_file_lock_win.cpp',
       '<(src_loc)/storage/cache/storage_cache_binlog_reader.cpp',
       '<(src_loc)/storage/cache/storage_cache_binlog_reader.h',
       '<(src_loc)/storage/cache/storage_cache_cleaner.cpp',
@@ -74,12 +71,10 @@
     'conditions': [[ 'build_win', {
       'sources!': [
         '<(src_loc)/storage/storage_clear_legacy_posix.cpp',
-        '<(src_loc)/storage/storage_file_lock_posix.cpp',
       ],
     }, {
       'sources!': [
         '<(src_loc)/storage/storage_clear_legacy_win.cpp',
-        '<(src_loc)/storage/storage_file_lock_win.cpp',
       ],
     }]],
   }],

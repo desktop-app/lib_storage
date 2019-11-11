@@ -110,7 +110,7 @@ bool File::writeHeader(const EncryptionKey &key) {
 	Expects(_data.pos() == 0);
 
 	const auto magic = bytes::make_span("TDEF");
-	if (!writePlain(magic.subspan(0, FileLock::kSkipBytes))) {
+	if (!writePlain(magic.subspan(0, base::FileLock::kSkipBytes))) {
 		return false;
 	}
 
@@ -139,7 +139,7 @@ File::Result File::readHeader(const EncryptionKey &key) {
 	Expects(!_state.has_value());
 	Expects(_data.pos() == 0);
 
-	if (!_data.seek(FileLock::kSkipBytes)) {
+	if (!_data.seek(base::FileLock::kSkipBytes)) {
 		return Result::Failed;
 	}
 	auto header = BasicHeader();
@@ -161,7 +161,7 @@ File::Result File::readHeader(const EncryptionKey &key) {
 	}
 	_dataSize = _data.size()
 		- int64(sizeof(BasicHeader))
-		- FileLock::kSkipBytes;
+		- base::FileLock::kSkipBytes;
 	Assert(_dataSize >= 0);
 	if (const auto bad = (_dataSize % kBlockSize)) {
 		_dataSize -= bad;
@@ -315,7 +315,7 @@ bool File::seek(int64 offset) {
 	const auto realOffset = sizeof(BasicHeader) + offset;
 	if (offset < 0 || offset > _dataSize) {
 		return false;
-	} else if (!_data.seek(FileLock::kSkipBytes + realOffset)) {
+	} else if (!_data.seek(base::FileLock::kSkipBytes + realOffset)) {
 		return false;
 	}
 	_encryptionOffset = realOffset - kSaltSize;
@@ -330,7 +330,7 @@ bool File::Move(const QString &from, const QString &to) {
 	QFile destination(to);
 	if (destination.exists()) {
 		{
-			FileLock locker;
+			base::FileLock locker;
 			if (!locker.lock(destination, QIODevice::WriteOnly)) {
 				return false;
 			}

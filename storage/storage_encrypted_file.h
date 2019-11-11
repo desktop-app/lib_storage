@@ -6,10 +6,10 @@
 //
 #pragma once
 
-#include "storage/storage_file_lock.h"
 #include "storage/storage_encryption.h"
 #include "base/bytes.h"
 #include "base/optional.h"
+#include "base/file_lock.h"
 
 namespace Storage {
 
@@ -61,7 +61,7 @@ private:
 	void decryptBack(bytes::span bytes);
 
 	QFile _data;
-	FileLock _lock;
+	base::FileLock _lock;
 	int64 _encryptionOffset = 0;
 	int64 _dataSize = 0;
 
