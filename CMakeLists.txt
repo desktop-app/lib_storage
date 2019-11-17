@@ -32,7 +32,7 @@ PRIVATE
 )
 nice_target_sources(lib_storage ${src_loc} "${lib_storage_sources}")
 
-force_include(lib_storage storage/storage_pch.h)
+target_precompile_headers(lib_storage PRIVATE ${src_loc}/storage/storage_pch.h)
 
 target_include_directories(lib_storage
 PUBLIC
