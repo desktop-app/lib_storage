@@ -37,16 +37,11 @@ target_precompile_headers(lib_storage PRIVATE ${src_loc}/storage/storage_pch.h)
 target_include_directories(lib_storage
 PUBLIC
     ${src_loc}
-PRIVATE
-    ${third_party_loc}/xxHash
-)
-
-target_compile_definitions(lib_storage
-PRIVATE
-    XXH_INLINE_ALL
 )
 
 target_link_libraries(lib_storage
 PUBLIC
     lib_base
+PRIVATE
+    external_xxhash
 )
