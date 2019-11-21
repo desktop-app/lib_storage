@@ -1,4 +1,11 @@
+# This file is part of Desktop App Toolkit,
+# a set of libraries for developing nice desktop applications.
+#
+# For license and copyright information please follow this link:
+# https://github.com/desktop-app/legal/blob/master/LEGAL
+
 add_library(lib_storage OBJECT)
+add_library(desktop-app::lib_storage ALIAS lib_storage)
 init_target(lib_storage)
 
 get_filename_component(src_loc . REALPATH)
@@ -41,7 +48,7 @@ PUBLIC
 
 target_link_libraries(lib_storage
 PUBLIC
-    lib_base
+    desktop-app::lib_base
 PRIVATE
-    external_xxhash
+    desktop-app::external_xxhash
 )
