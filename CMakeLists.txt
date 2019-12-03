@@ -10,7 +10,8 @@ init_target(lib_storage)
 
 get_filename_component(src_loc . REALPATH)
 
-set(lib_storage_sources
+target_precompile_headers(lib_storage PRIVATE ${src_loc}/storage/storage_pch.h)
+nice_target_sources(lib_storage ${src_loc}
 PRIVATE
     storage/storage_clear_legacy.cpp
     storage/storage_clear_legacy_posix.cpp
@@ -37,9 +38,6 @@ PRIVATE
     storage/storage_clear_legacy_posix.cpp
     storage/storage_clear_legacy_win.cpp
 )
-nice_target_sources(lib_storage ${src_loc} "${lib_storage_sources}")
-
-target_precompile_headers(lib_storage PRIVATE ${src_loc}/storage/storage_pch.h)
 
 target_include_directories(lib_storage
 PUBLIC
