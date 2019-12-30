@@ -762,6 +762,10 @@ void DatabaseObject::put(
 		const Key &key,
 		TaggedValue &&value,
 		FnMut<void(Error)> &&done) {
+	if (!_binlog.isOpen()) {
+		invokeCallback(done, ioError(versionPath()));
+		return;
+	}
 	if (value.bytes.isEmpty()) {
 		remove(key, std::move(done));
 		return;
@@ -1030,6 +1034,10 @@ void DatabaseObject::recordEntryAccess(const Key &key) {
 }
 
 void DatabaseObject::remove(const Key &key, FnMut<void(Error)> &&done) {
+	if (!_binlog.isOpen()) {
+		invokeCallback(done, ioError(versionPath()));
+		return;
+	}
 	const auto i = _map.find(key);
 	if (i != _map.end()) {
 		_removing.emplace(key);
