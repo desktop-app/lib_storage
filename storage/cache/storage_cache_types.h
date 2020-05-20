@@ -19,6 +19,13 @@ namespace Cache {
 struct Key {
 	uint64 high = 0;
 	uint64 low = 0;
+
+	[[nodiscard]] bool valid() const {
+		return (high != 0) || (low != 0);
+	}
+	explicit operator bool() const {
+		return valid();
+	}
 };
 
 inline bool operator==(const Key &a, const Key &b) {
