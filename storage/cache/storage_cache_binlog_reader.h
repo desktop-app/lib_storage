@@ -91,6 +91,8 @@ template <typename ...Records>
 struct BinlogReaderRecursive {
 	static void CheckSettings(const Settings &settings) {
 	}
+	static void CheckSettingsMulti(const Settings &settings) {
+	}
 
 	static size_type ReadRecordSize(
 			RecordType type,
@@ -111,8 +113,13 @@ struct BinlogReaderRecursive {
 template <typename Record, typename ...Other>
 struct BinlogReaderRecursive<Record, Other...> {
 	static void CheckSettings(const Settings &settings);
+	static void CheckSettingsMulti(const Settings &settings);
 
 	static size_type ReadRecordSize(
+		RecordType type,
+		bytes::const_span data,
+		size_type partsLimit);
+	static size_type ReadRecordSizeMulti(
 		RecordType type,
 		bytes::const_span data,
 		size_type partsLimit);
@@ -129,15 +136,21 @@ inline void BinlogReaderRecursive<Record, Other...>::CheckSettings(
 		const Settings &settings) {
 	static_assert(GoodForEncryption<Record>);
 	if constexpr (MultiRecord<Record>::Is) {
-		using Head = Record;
-		using Part = typename Record::Part;
-		static_assert(GoodForEncryption<Part>);
-		Assert(settings.readBlockSize
-			>= (sizeof(Head)
-				+ settings.maxBundledRecords * sizeof(Part)));
+		CheckSettingsMulti(settings);
 	} else {
 		Assert(settings.readBlockSize >= sizeof(Record));
 	}
+}
+
+template <typename Record, typename ...Other>
+inline void BinlogReaderRecursive<Record, Other...>::CheckSettingsMulti(
+		const Settings &settings) {
+	using Head = Record;
+	using Part = typename Record::Part;
+	static_assert(GoodForEncryption<Part>);
+	Assert(settings.readBlockSize
+		>= (sizeof(Head)
+			+ settings.maxBundledRecords * sizeof(Part)));
 }
 
 template <typename Record, typename ...Other>
@@ -152,20 +165,28 @@ inline size_type BinlogReaderRecursive<Record, Other...>::ReadRecordSize(
 			partsLimit);
 	}
 	if constexpr (MultiRecord<Record>::Is) {
-		using Head = Record;
-		using Part = typename Record::Part;
-
-		if (data.size() < sizeof(Head)) {
-			return kRecordSizeUnknown;
-		}
-		const auto head = reinterpret_cast<const Head*>(data.data());
-		const auto count = head->validateCount();
-		return (count >= 0 && count <= partsLimit)
-				? (sizeof(Head) + count * sizeof(Part))
-				: kRecordSizeInvalid;
+		return ReadRecordSizeMulti(type, data, partsLimit);
 	} else {
 		return sizeof(Record);
 	}
+}
+
+template <typename Record, typename ...Other>
+inline size_type BinlogReaderRecursive<Record, Other...>::ReadRecordSizeMulti(
+		RecordType type,
+		bytes::const_span data,
+		size_type partsLimit) {
+	using Head = Record;
+	using Part = typename Record::Part;
+
+	if (data.size() < sizeof(Head)) {
+		return kRecordSizeUnknown;
+	}
+	const auto head = reinterpret_cast<const Head*>(data.data());
+	const auto count = head->validateCount();
+	return (count >= 0 && count <= partsLimit)
+		? (sizeof(Head) + count * sizeof(Part))
+		: kRecordSizeInvalid;
 }
 
 template <typename Record, typename ...Other>
