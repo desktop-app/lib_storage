@@ -75,7 +75,7 @@ private:
 	BinlogWrapper _wrapper;
 	size_type _partSize = 0;
 	std::unordered_set<Key> _written;
-	base::variant<
+	std::variant<
 		std::vector<MultiStore::Part>,
 		std::vector<MultiStoreWithTime::Part>> _list;
 
@@ -215,20 +215,17 @@ void CompactorObject::finalize() {
 }
 
 bool CompactorObject::writeList() {
-	if (_list.is<std::vector<MultiStore::Part>>()) {
+	return v::match(_list, [&](const std::vector<MultiStore::Part>&) {
 		return writeMultiStore<MultiStore>();
-	} else if (_list.is<std::vector<MultiStoreWithTime::Part>>()) {
+	}, [&](const std::vector<MultiStoreWithTime::Part>&) {
 		return writeMultiStore<MultiStoreWithTime>();
-	} else {
-		Unexpected("List type in CompactorObject::writeList.");
-	}
+	});
 }
 
 template <typename MultiRecord>
 bool CompactorObject::writeMultiStore() {
 	using Part = typename MultiRecord::Part;
-	Assert(_list.is<std::vector<Part>>());
-	auto &list = _list.get_unchecked<std::vector<Part>>();
+	auto &list = std::get<std::vector<Part>>(_list);
 	if (list.empty()) {
 		return true;
 	}
@@ -331,7 +328,7 @@ void CompactorObject::processValues(
 }
 
 auto CompactorObject::fillList(RawSpan values) -> RawSpan {
-	return _list.match([&](auto &list) {
+	return v::match(_list, [&](auto &list) {
 		return fillList(list, values);
 	});
 }
