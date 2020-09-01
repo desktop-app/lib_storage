@@ -225,7 +225,7 @@ bool CompactorObject::writeList() {
 template <typename MultiRecord>
 bool CompactorObject::writeMultiStore() {
 	using Part = typename MultiRecord::Part;
-	auto &list = std::get<std::vector<Part>>(_list);
+	auto &list = v::get<std::vector<Part>>(_list);
 	if (list.empty()) {
 		return true;
 	}
