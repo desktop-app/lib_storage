@@ -1319,7 +1319,7 @@ auto DatabaseObject::findAvailableVersion() const -> Version {
 	const auto entries = QDir(_base).entryList(
 		QDir::Dirs | QDir::NoDotAndDotDot);
 	auto versions = base::flat_set<Version>();
-	for (const auto entry : entries) {
+	for (const auto &entry : entries) {
 		versions.insert(entry.toInt());
 	}
 	auto result = Version();
