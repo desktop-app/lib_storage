@@ -37,6 +37,8 @@ PRIVATE
     storage/cache/storage_cache_types.h
     storage/storage_clear_legacy_posix.cpp
     storage/storage_clear_legacy_win.cpp
+
+    storage/storage_pch.h
 )
 
 target_include_directories(lib_storage
