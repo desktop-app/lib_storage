@@ -346,7 +346,7 @@ void DatabaseObject::prune() {
 	if (stale.size() <= _settings.staleRemoveChunk) {
 		clearStaleNow(stale);
 	} else {
-		_stale = ranges::view::all(stale) | ranges::to_vector;
+		_stale = ranges::views::all(stale) | ranges::to_vector;
 		startStaleClear();
 	}
 }
@@ -993,7 +993,7 @@ void DatabaseObject::getWithSizes(
 			return;
 		}
 
-		auto sizes = keys | ranges::view::transform([&](const Key &sizeKey) {
+		auto sizes = keys | ranges::views::transform([&](const Key &sizeKey) {
 			const auto i = _map.find(sizeKey);
 			return (i != end(_map)) ? int(i->second.size) : 0;
 		}) | ranges::to_vector;

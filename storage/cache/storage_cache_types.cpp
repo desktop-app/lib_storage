@@ -28,7 +28,7 @@ inline Packed ReadTo(size_type count) {
 template <typename Packed>
 inline size_type ReadFrom(const Packed &count) {
 	auto result = size_type();
-	for (auto &element : (count | ranges::view::reverse)) {
+	for (auto &element : (count | ranges::views::reverse)) {
 		result <<= 8;
 		result |= size_type(element);
 	}
