@@ -38,7 +38,7 @@ std::vector<QString> CollectFiles(
 		const auto full = path + QByteArray(local);
 		const auto data = full.constData();
 		struct stat statbuf = { 0 };
-		if (stat(full.constData(), &statbuf) != 0 || S_ISDIR(statbuf.st_mode)) {
+		if (stat(data, &statbuf) != 0 || S_ISDIR(statbuf.st_mode)) {
 			continue;
 		}
 
