@@ -21,9 +21,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <thread>
 #ifdef Q_OS_MAC
 #include <mach-o/dyld.h>
-#elif defined Q_OS_UNIX // Q_OS_MAC
+#elif !defined Q_OS_WIN // Q_OS_MAC
 #include <unistd.h>
-#endif // Q_OS_MAC || Q_OS_UNIX
+#endif // Q_OS_MAC || !Q_OS_WIN
 
 extern int (*TestForkedMethod)();
 
