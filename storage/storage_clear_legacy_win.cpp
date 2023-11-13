@@ -6,7 +6,7 @@
 //
 #include "storage/storage_clear_legacy.h"
 
-#include "base/platform/win/base_windows_h.h"
+#include <windows.h>
 
 namespace Storage {
 namespace details {
