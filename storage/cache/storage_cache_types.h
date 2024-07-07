@@ -67,8 +67,8 @@ using RecordsCount = std::array<uint8, 3>;
 constexpr auto kRecordSizeUnknown = size_type(-1);
 constexpr auto kRecordSizeInvalid = size_type(-2);
 constexpr auto kBundledRecordsLimit
-	= size_type(1 << (RecordsCount().size() * 8));
-constexpr auto kDataSizeLimit = size_type(1 << (EntrySize().size() * 8));
+	= size_type(1) << (RecordsCount().size() * 8);
+constexpr auto kDataSizeLimit = size_type(1) << (EntrySize().size() * 8);
 
 struct Settings {
 	size_type maxBundledRecords = 16 * 1024;
